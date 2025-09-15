@@ -1,0 +1,20 @@
+[project]
+name = "tst3213"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "art>=6.5",
+]
+
+[tool.pyright]
+typeCheckingMode = "off"
+venv = ".venv"
+venvPath = "."
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.format]
+quote-style = "single"
