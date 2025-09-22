@@ -1,8 +1,5 @@
 import curses
-import socket
-import time
 from curses.textpad import Textbox, rectangle
-from turtle import clear
 
 
 def draw_title(stdscr: curses.window, text: str):
@@ -15,9 +12,6 @@ def draw_title(stdscr: curses.window, text: str):
 
 
 def main(stdscr: curses.window):
-    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sock.connect(('localhost', 8080))
-
     stdscr.addstr('keka')
     stdscr.refresh()
 
@@ -53,7 +47,7 @@ def main(stdscr: curses.window):
     frame = 0
     while True:
         frame += 1
-        time.sleep(0.001)
+        curses.napms(10)
         stdscr.addstr(1, 1, f'frame: {frame}')
         try:
             key = stdscr.getkey()
