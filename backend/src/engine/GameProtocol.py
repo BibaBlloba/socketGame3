@@ -4,7 +4,6 @@ from enum import IntEnum
 from typing import Any
 
 
-@dataclass
 class MessageType(IntEnum):
     PLAYER_UPDATE = 1
     PLAYER_JOIN = 2
