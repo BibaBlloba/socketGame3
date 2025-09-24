@@ -1,6 +1,23 @@
 import curses
 from curses.textpad import Textbox, rectangle
 
+import websockets
+
+game_state = {
+    'players': {},
+    'local_player_id': None,
+}
+
+
+async def websocket_client(messages_queue):
+    url = 'ws://localhost:8000/game/ws'
+
+    try:
+        async with websockets.connect(url) as websocket:
+            pass
+    except Exception as ex:
+        pass
+
 
 def draw_title(stdscr: curses.window, text: str):
     _, width = stdscr.getmaxyx()
@@ -15,7 +32,7 @@ def main(stdscr: curses.window):
     stdscr.addstr('keka')
     stdscr.refresh()
 
-    draw_title(stdscr, 'azui')
+    draw_title(stdscr, 'axui')
 
     class player:
         x: int = 10
