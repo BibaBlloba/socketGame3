@@ -1,5 +1,6 @@
 from sqlalchemy import delete
-from str.database import Base
+
+from src.database import Base
 
 
 class BaseRepository:
