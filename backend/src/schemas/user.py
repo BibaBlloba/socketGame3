@@ -11,6 +11,11 @@ class UserAdd(BaseModel):
     hashed_password: str
 
 
+class UserLogin(BaseModel):
+    name: str
+    password: str
+
+
 class User(BaseModel):
     id: int
     name: str

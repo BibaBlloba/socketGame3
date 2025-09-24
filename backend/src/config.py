@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     DB_PORT: int
     DB_USER: str
     DB_PASS: str
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str
+    JWT_ACCESS_TOKEN_EXIPRE_MINUTES: int
     REDIS_HOST: str
     REDIS_PORT: int
 

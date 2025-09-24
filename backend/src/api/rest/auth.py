@@ -2,7 +2,7 @@ from fastapi import APIRouter, Body, HTTPException
 
 from services.auth import AuthService
 from src.api.dependencies import DbDep
-from src.schemas.user import UserAdd, UserAddRequest
+from src.schemas.user import UserAdd, UserAddRequest, UserLogin
 
 router = APIRouter(prefix='/auth', tags=['Auth'])
 
@@ -17,3 +17,14 @@ async def register_user(db: DbDep, data: UserAddRequest = Body()):
     result = await db.users.add(hashed_user_data)
     await db.commit()
     return result
+
+
+@router.post('/login')
+async def login_user(db: DbDep, data: UserLogin):
+    user = await db.users.get_uesr_with_hashedPwd(name=data.name)
+    if not user:
+        raise HTTPException(status_code=401, detail='Пользователь не найден')
+    if not AuthService().verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail='Пароль неверный')
+    access_token = AuthService().create_access_token({'user_id': user.id})
+    return {'access_token': access_token}
