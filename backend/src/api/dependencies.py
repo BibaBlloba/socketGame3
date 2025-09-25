@@ -19,6 +19,9 @@ async def get_current_user(websocket: WebSocket, token: str = Query()):
     return data  # FIX: Пока не понятно, что он возвращает
 
 
+UserDep = Annotated[dict, Depends(get_current_user)]
+
+
 async def get_db():
     async with DbManager(session_factory=async_session_maker) as db:
         yield db

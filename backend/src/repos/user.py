@@ -10,8 +10,12 @@ from src.repos.base import BaseRepository
 class UserRepository(BaseRepository):
     model = UsersOrm
 
-    async def get_uesr_with_hashedPwd(self, name):
-        query = select(self.model).filter_by(name=name)
+    async def get_uesr_with_hashedPwd(self, name: str = None, id: str = None):
+        query = select(self.model)
+        if name:
+            query = query.filter_by(name=name)
+        elif id:
+            query = query.filter_by(id=id)
         result = await self.session.execute(query)
         return result.scalars().one_or_none()
 

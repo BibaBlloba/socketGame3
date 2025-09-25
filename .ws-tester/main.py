@@ -134,15 +134,16 @@ class GameProtocol:
 
 async def main():
     print("connecting...")
-    webs = await websockets.connect("ws://localhost:8000/game/ws")
+    webs = await websockets.connect(
+        "ws://localhost:8000/game/ws?token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VyX2lkIjoxLCJleHAiOjE3NTg3NDYxMjN9.SL1UXIAbqrg3AlrWgRhXkVheCRTrmNrcnqTUWWWTY5E"
+    )
     print("Connected\n")
 
-    update_pos = PlayerUpdate(20, 10, 20)
-    packed_data = GameProtocol.pack_player_update(update_pos)
-    await webs.send(packed_data)
-
     while True:
-        time.sleep(2)
+        message: bytes = await webs.recv()
+
+        if message:
+            print(GameProtocol.unpack_message(message))
 
 
 asyncio.run(main())
