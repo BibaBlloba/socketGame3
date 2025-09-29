@@ -35,6 +35,23 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
         data = GameProtocol.pack_player_init(init_player_data)
         await websocket.send_bytes(data)
 
+        for (
+            existing_player_name,
+            existing_player,
+        ) in gameSessionsManager.players.items():
+            if existing_player.id == user['user_id']:
+                continue
+
+            existing_player_data = PlayerJoin(
+                existing_player.id,
+                existing_player.name,
+                existing_player.position['x'],
+                existing_player.position['y'],
+            )
+            await websocket.send_bytes(
+                GameProtocol.pack_player_join(existing_player_data)
+            )
+
         for _, player in gameSessionsManager.players.items():
             if player.id == user['user_id']:
                 continue

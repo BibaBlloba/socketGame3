@@ -105,6 +105,12 @@ class GameClient:
                     'x': data.x,
                     'y': data.y,
                 }
+            elif isinstance(data, PlayerUpdate):
+                self.game_state['objects']['players'][data.player_id] = {
+                    'name': data.name,
+                    'x': data.x,
+                    'y': data.y,
+                }
         except Exception as e:
             raise e
 
