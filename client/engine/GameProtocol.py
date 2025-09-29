@@ -33,6 +33,7 @@ class PlayerJoin:
 @dataclass
 class PlayerUpdate:
     player_id: int
+    name: str
     x: int
     y: int
 
@@ -70,10 +71,12 @@ class GameProtocol:
     @staticmethod
     def pack_player_update(update: PlayerUpdate) -> bytes:
         """Упаковка обновления позиции игрока"""
+        # Упаковка основных данных
         data = struct.pack(
-            '!BIii',
+            '!BI20sii',
             MessageType.PLAYER_UPDATE,
             update.player_id,
+            update.name.encode('utf-8'),
             update.x,
             update.y,
         )
@@ -82,8 +85,8 @@ class GameProtocol:
     @staticmethod
     def unpack_player_update(data: bytes) -> PlayerUpdate:
         """Распаковка обновления позиции игрока"""
-        _, player_id, x, y = struct.unpack('!BIii', data)
-        return PlayerUpdate(player_id, x, y)
+        msg_type, player_id, name, x, y = struct.unpack('!BI20sii', data)
+        return PlayerUpdate(player_id, name, x, y)
 
     @staticmethod
     def pack_chat_message(chat: ChatMessage) -> bytes:

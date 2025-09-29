@@ -16,10 +16,11 @@ from engine.GameProtocol import (GameProtocol, PlayerInit, PlayerJoin,
 class GameClient:
     def __init__(self, server_url: str, token: str) -> None:
         self.player_id: int = None
+        self.player_name: int = None
         self.server_url = f'ws://{server_url}:8000/game/ws?token={token}'
         self.game_state = {
             'player': {'id': 0, 'name': None, 'x': 0, 'y': 0},
-            'objects': {},
+            'objects': {'players': {}},
             'chat': [],
             'last_message': None,
         }
@@ -52,7 +53,7 @@ class GameClient:
 
     async def outgoing_sender(self):
         """Отправка исходящих сообщений из очереди"""
-        while self.running:
+        while True:
             try:
                 # Ждем сообщение для отправки
                 message = await asyncio.get_event_loop().run_in_executor(
@@ -62,11 +63,14 @@ class GameClient:
                     0.1,  # timeout 0.1s
                 )
                 if self.websocket:
+                    self.add_chat_message(
+                        f'send move: {GameProtocol.unpack_message(message)}'
+                    )
                     await self.websocket.send(message)
             except asyncio.TimeoutError:
                 continue  # Проверяем running условие
             except Exception as e:
-                print(f'Send error: {e}')
+                pass
 
     def process_server_messages(self):
         """Обработка сообщений от сервера (вызывается в основном потоке)"""
@@ -86,6 +90,7 @@ class GameClient:
                 _name = data.name.decode('utf-8').replace('\0', '')
 
                 self.player_id = data.player_id
+                self.player_name = _name
                 self.game_state['player'] = {
                     'id': data.player_id,
                     'name': _name,
@@ -95,6 +100,11 @@ class GameClient:
             elif isinstance(data, PlayerJoin):
                 self.game_state['last_message'] = 'player join'
                 self.add_chat_message('player join')
+                self.game_state['objects']['players'][data.player_id] = {
+                    'name': data.name,
+                    'x': data.x,
+                    'y': data.y,
+                }
         except Exception as e:
             raise e
 
@@ -157,7 +167,7 @@ class GameClient:
             self.game_state['player']['y'] = new_y
 
             message = GameProtocol.pack_player_update(
-                PlayerUpdate(self.player_id, new_x, new_y)
+                PlayerUpdate(self.player_id, self.player_name, new_x, new_y)
             )
             self.outgoing_queue.put(message)
 
@@ -183,9 +193,39 @@ class GameClient:
         chat_win.box()
         chat_win.addstr(0, 2, ' XUI ')
 
-        # Рисуем сообщения
-        for i, msg in enumerate(self.game_state['chat'][-chat_height + 2 :]):
-            chat_win.addstr(chat_height - 2 - i, 1, msg[: chat_width - 2])
+        # Доступная высота для сообщений (исключая рамку)
+        available_height = chat_height - 2
+        max_line_width = chat_width - 2  # Ширина с учетом отступов от рамки
+
+        # Собираем все строки для отображения
+        display_lines = []
+
+        # Обрабатываем сообщения в прямом порядке (от старых к новым)
+        for msg in self.game_state['chat']:
+            # Разбиваем длинные сообщения на несколько строк
+            if len(msg) <= max_line_width:
+                display_lines.append(msg)
+            else:
+                # Разбиваем сообщение на строки нужной длины
+                start = 0
+                while start < len(msg):
+                    end = start + max_line_width
+                    if end < len(msg):
+                        # Пытаемся найти пробел для разрыва слова
+                        break_pos = msg.rfind(' ', start, end)
+                        if break_pos != -1 and break_pos > start:
+                            end = break_pos + 1
+
+                    display_lines.append(msg[start:end].strip())
+                    start = end
+
+        # Берем только последние N строк, которые помещаются в чат
+        visible_lines = display_lines[-available_height:]
+
+        # Отображаем строки (первые строки вверху, последние внизу)
+        for i, line in enumerate(visible_lines):
+            if i < available_height:
+                chat_win.addstr(i + 1, 1, line.ljust(max_line_width)[:max_line_width])
 
         chat_win.refresh()
 
@@ -210,6 +250,34 @@ class GameClient:
         player_screen_y = player['y'] - camera_y
         if 0 <= player_screen_x < width and 0 <= player_screen_y < height:
             stdscr.addch(player_screen_y, player_screen_x, '@')
+
+        if 'objects' in self.game_state and 'players' in self.game_state['objects']:
+            for other_player_id, other_player in self.game_state['objects'][
+                'players'
+            ].items():
+                if other_player_id == self.player_id:
+                    continue
+
+                # Преобразуем абсолютные координаты в экранные относительно камеры
+                other_screen_x = other_player['x'] - camera_x
+                other_screen_y = other_player['y'] - camera_y
+
+                # Проверяем, виден ли игрок на экране
+                if 0 <= other_screen_x < width and 0 <= other_screen_y < height:
+                    # Определяем символ для другого игрока
+                    char = '1'
+                    color = 'RED'
+
+                    try:
+                        stdscr.addch(other_screen_y, other_screen_x, char)
+
+                        # Подписываем имя игрока (если есть место)
+                        if 'name' in other_player and other_screen_y + 1 < height:
+                            name = other_player['name'][:10]  # Обрезаем длинные имена
+                            if other_screen_x + len(name) < width:
+                                stdscr.addstr(other_screen_y + 1, other_screen_x, name)
+                    except curses.error:
+                        pass  # Игнорируем ошибки выхода за границы экрана
 
         stdscr.refresh()
 
