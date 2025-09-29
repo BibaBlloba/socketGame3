@@ -105,6 +105,9 @@ class GameClient:
                     'x': data.x,
                     'y': data.y,
                 }
+                self.add_chat_message(
+                    f'new player: {self.game_state["objects"]["players"][data.player_id]["name"]} | type: {type(self.game_state["objects"]["players"][data.player_id]["name"])}'
+                )
             elif isinstance(data, PlayerUpdate):
                 self.game_state['objects']['players'][data.player_id] = {
                     'name': data.name,

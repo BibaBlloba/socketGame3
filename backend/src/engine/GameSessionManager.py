@@ -34,7 +34,7 @@ class GameSessionsManager:
         self.players[name] = PlayerSession(websocket, id, name, x, y)
 
     async def broadcast(self, message: str):
-        for player in self.players.items():
+        for _, player in self.players.items():
             await player.send_message(message)
 
 

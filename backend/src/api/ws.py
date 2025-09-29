@@ -80,11 +80,15 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
                     print('name =', data.name)
 
                 if isinstance(data, PlayerUpdate):
-                    # Проверяем, существует ли игрок
                     if data.name in gameSessionsManager.players:
                         gameSessionsManager.players[data.name].position['x'] = data.x
                         gameSessionsManager.players[data.name].position['y'] = data.y
                         print('player pos updated')
+
+                        for _, player in gameSessionsManager.players.items():
+                            if player.id == user['user_id']:
+                                continue
+                            await player.websocket.send_bytes(message)
                     else:
                         print(f'Игрок {data.name} не найден')
             except Exception as ex:
