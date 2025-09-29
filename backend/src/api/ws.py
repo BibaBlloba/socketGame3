@@ -1,8 +1,8 @@
-from fastapi import APIRouter, WebSocket
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from src.api.dependencies import UserDep
 from src.api.rest.auth import DbDep
-from src.engine.GameProtocol import GameProtocol
+from src.engine.GameProtocol import GameProtocol, PlayerInit
 from src.engine.GameSessionManager import gameSessionsManager
 
 router = APIRouter(prefix='/game', tags=['ws'])
@@ -24,13 +24,21 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
             print(player[1].name)
             print(player[1].position)
 
-            init_player_data = f'player_init:{player[1].id}:{player[1].name}:{player[1].position["x"]}:{player[1].position["y"]}'
+            init_player_data = PlayerInit(
+                player[1].id,
+                player[1].name,
+                player[1].position['x'],
+                player[1].position['y'],
+            )
+            data = GameProtocol.pack_player_init(init_player_data)
 
-            await websocket.send_bytes(init_player_data.encode('utf-8'))
+            await websocket.send_bytes(data)
 
         while True:
-            data = await websocket.receive_text()
+            data = await websocket.receive_bytes()
             if data:
                 print(f'Recieved data: {data}')
+    except WebSocketDisconnect:
+        del gameSessionsManager.players[user_data.name]
     except Exception as ex:
-        print(ex)
+        print('ex: ', ex)

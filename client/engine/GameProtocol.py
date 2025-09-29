@@ -11,6 +11,15 @@ class MessageType(IntEnum):
     PLAYER_LEAVE = 3
     CHAT_MESSAGE = 4
     WORLD_STATE = 5
+    PLAYER_INIT = 6
+
+
+@dataclass
+class PlayerInit:
+    player_id: int
+    name: str
+    x: int
+    y: int
 
 
 @dataclass
@@ -32,16 +41,27 @@ class ChatMessage:
 
 
 class GameProtocol:
-    FORMATS = {
-        MessageType.PLAYER_UPDATE: '!Iii',  # player_id, x, y
-        MessageType.PLAYER_JOIN: '!I',  # player_id
-        MessageType.PLAYER_LEAVE: '!I',  # player_id
-    }
+    @staticmethod
+    def pack_player_init(init: PlayerInit):
+        """Упаковка инициализации игрока"""
+        data = struct.pack(
+            '!BI20sii',
+            MessageType.PLAYER_INIT,
+            init.player_id,
+            init.name.encode('utf-8'),
+            init.x,
+            init.y,
+        )
+        return data
+
+    @staticmethod
+    def unpack_player_init(data: bytes):
+        _, player_id, name, x, y = struct.unpack('!BI20sii', data)
+        return PlayerInit(player_id, name, x, y)
 
     @staticmethod
     def pack_player_update(update: PlayerUpdate) -> bytes:
         """Упаковка обновления позиции игрока"""
-        # Упаковка основных данных
         data = struct.pack(
             '!BIii',
             MessageType.PLAYER_UPDATE,
@@ -54,7 +74,7 @@ class GameProtocol:
     @staticmethod
     def unpack_player_update(data: bytes) -> PlayerUpdate:
         """Распаковка обновления позиции игрока"""
-        msg_type, player_id, x, y = struct.unpack('!BIii', data)
+        _, player_id, x, y = struct.unpack('!BIii', data)
         return PlayerUpdate(player_id, x, y)
 
     @staticmethod
@@ -76,10 +96,10 @@ class GameProtocol:
     def unpack_chat_message(data: bytes) -> ChatMessage:
         """Распаковка чат-сообщения"""
         # Сначала читаем заголовок чтобы узнать длину сообщения
-        msg_type, player_id, msg_length = struct.unpack('!B I I', data[:9])
+        _, player_id, msg_length = struct.unpack('!B I I', data[:9])
         # Затем читаем полное сообщение
         full_format = f'!B I I {msg_length}s f'
-        msg_type, player_id, msg_length, message_bytes, timestamp = struct.unpack(
+        _, player_id, msg_length, message_bytes, timestamp = struct.unpack(
             full_format, data
         )
         return ChatMessage(player_id, message_bytes.decode('utf-8'), timestamp)
@@ -92,7 +112,7 @@ class GameProtocol:
     @staticmethod
     def unpack_player_join(data: bytes) -> int:
         """Распаковка сообщения о подключении игрока"""
-        msg_type, player_id = struct.unpack('!B I', data)
+        _, player_id = struct.unpack('!B I', data)
         return player_id
 
     @staticmethod
@@ -103,7 +123,7 @@ class GameProtocol:
     @staticmethod
     def unpack_player_leave(data: bytes) -> int:
         """Распаковка сообщения об отключении игрока"""
-        msg_type, player_id = struct.unpack('!B I', data)
+        _, player_id = struct.unpack('!B I', data)
         return player_id
 
     @staticmethod
@@ -123,6 +143,8 @@ class GameProtocol:
                 return GameProtocol.unpack_player_join(data)
             elif msg_type == MessageType.PLAYER_LEAVE:
                 return GameProtocol.unpack_player_leave(data)
+            elif msg_type == MessageType.PLAYER_INIT:
+                return GameProtocol.unpack_player_init(data)
         except Exception as e:
             print(f'Ошибка распаковки сообщения типа {msg_type}: {e}')
             return None
