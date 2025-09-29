@@ -46,12 +46,27 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
 
         while True:
             message = await websocket.receive_bytes()
-            if message:
-                data = GameProtocol.unpack_message(message)
-                print(data)
+            try:
+                if message:
+                    data = GameProtocol.unpack_message(message)
+
+                    if data is None:
+                        print('Не удалось распаковать сообщение')
+                        return
+
+                    print(f'{data=}')
+                    print('name =', data.name)
 
                 if isinstance(data, PlayerUpdate):
-                    gameSessionsManager.players[data.name]
+                    # Проверяем, существует ли игрок
+                    if data.name in gameSessionsManager.players:
+                        gameSessionsManager.players[data.name].position['x'] = data.x
+                        gameSessionsManager.players[data.name].position['y'] = data.y
+                        print('player pos updated')
+                    else:
+                        print(f'Игрок {data.name} не найден')
+            except Exception as ex:
+                print(f'ex 2: {ex}')
 
     except WebSocketDisconnect:
         print(f'{user_data.name} disconnected')

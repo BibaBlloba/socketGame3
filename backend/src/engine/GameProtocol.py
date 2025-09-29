@@ -85,7 +85,8 @@ class GameProtocol:
     @staticmethod
     def unpack_player_update(data: bytes) -> PlayerUpdate:
         """Распаковка обновления позиции игрока"""
-        msg_type, player_id, name, x, y = struct.unpack('!BI20sii', data)
+        msg_type, player_id, name_bytes, x, y = struct.unpack('!BI20sii', data)
+        name = name_bytes.decode('utf-8').rstrip('\x00')
         return PlayerUpdate(player_id, name, x, y)
 
     @staticmethod
