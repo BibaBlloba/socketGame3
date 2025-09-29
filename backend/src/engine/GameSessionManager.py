@@ -19,9 +19,9 @@ class PlayerSession:
     def update_position(self, x: int, y: int):
         self.position = {'x': x, 'y': y}
 
-    async def send_message(self, message: str):
+    async def send_message(self, message: bytes):
         try:
-            await self.websocket.send_text(message)
+            await self.websocket.send_bytes(message)
         except Exception as ex:
             print(f'error: {ex}')
 

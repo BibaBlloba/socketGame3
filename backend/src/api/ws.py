@@ -2,7 +2,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from src.api.dependencies import UserDep
 from src.api.rest.auth import DbDep
-from src.engine.GameProtocol import GameProtocol, PlayerInit
+from src.engine.GameProtocol import GameProtocol, PlayerInit, PlayerJoin
 from src.engine.GameSessionManager import gameSessionsManager
 
 router = APIRouter(prefix='/game', tags=['ws'])
@@ -27,8 +27,19 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
             player.position['y'],
         )
         data = GameProtocol.pack_player_init(init_player_data)
-
         await websocket.send_bytes(data)
+
+        for _, player in gameSessionsManager.players.items():
+            if player.id == id:
+                continue
+
+            data = PlayerJoin(
+                player.id,
+                player.name,
+                player.position['x'],
+                player.position['y'],
+            )
+            await websocket.send_bytes(GameProtocol.pack_player_join(data))
 
         while True:
             data = await websocket.receive_bytes()

@@ -23,6 +23,14 @@ class PlayerInit:
 
 
 @dataclass
+class PlayerJoin:
+    player_id: int
+    name: str
+    x: int
+    y: int
+
+
+@dataclass
 class PlayerUpdate:
     player_id: int
     x: int
@@ -106,15 +114,22 @@ class GameProtocol:
         return ChatMessage(player_id, message_bytes.decode('utf-8'), timestamp)
 
     @staticmethod
-    def pack_player_join(player_id: int) -> bytes:
+    def pack_player_join(data: PlayerJoin) -> bytes:
         """Упаковка сообщения о подключении игрока"""
-        return struct.pack('!B I', MessageType.PLAYER_JOIN, player_id)
+        return struct.pack(
+            '!B I 20s i i',
+            MessageType.PLAYER_JOIN,
+            data.player_id,
+            data.name.encode('utf-8'),
+            data.x,
+            data.y,
+        )
 
     @staticmethod
     def unpack_player_join(data: bytes) -> int:
         """Распаковка сообщения о подключении игрока"""
-        msg_type, player_id = struct.unpack('!B I', data)
-        return player_id
+        _, player_id, name, x, y = struct.unpack('!B I 20s i i', data)
+        return PlayerJoin(player_id, name, x, y)
 
     @staticmethod
     def pack_player_leave(player_id: int) -> bytes:

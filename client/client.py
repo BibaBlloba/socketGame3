@@ -9,7 +9,8 @@ from queue import Queue
 import requests
 import websockets
 
-from engine.GameProtocol import GameProtocol, PlayerInit, PlayerUpdate
+from engine.GameProtocol import (GameProtocol, PlayerInit, PlayerJoin,
+                                 PlayerUpdate)
 
 
 class GameClient:
@@ -76,7 +77,7 @@ class GameClient:
     def handle_server_message(self, message: bytes):
         """Разбор сообщений от сервера"""
         data = GameProtocol.unpack_message(message)
-        self.game_state['last_message'] = f'{self.game_state["chat"]=}'
+        self.add_chat_message(f'{data=}')
 
         try:
             if isinstance(data, PlayerInit):
@@ -91,6 +92,8 @@ class GameClient:
                     'x': data.x,
                     'y': data.y,
                 }
+            elif isinstance(data, PlayerJoin):
+                self.add_chat_message('player join')
         except Exception as e:
             raise e
 
