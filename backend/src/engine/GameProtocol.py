@@ -114,16 +114,17 @@ class GameProtocol:
         return ChatMessage(player_id, message_bytes.decode('utf-8'), timestamp)
 
     @staticmethod
-    def pack_player_join(data: PlayerJoin) -> bytes:
+    def pack_player_join(join_data: PlayerJoin) -> bytes:
         """Упаковка сообщения о подключении игрока"""
-        return struct.pack(
+        data = struct.pack(
             '!B I 20s i i',
             MessageType.PLAYER_JOIN,
-            data.player_id,
-            data.name.encode('utf-8'),
-            data.x,
-            data.y,
+            join_data.player_id,
+            join_data.name.encode('utf-8'),
+            join_data.x,
+            join_data.y,
         )
+        return data
 
     @staticmethod
     def unpack_player_join(data: bytes) -> int:

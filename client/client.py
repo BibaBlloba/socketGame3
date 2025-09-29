@@ -93,6 +93,7 @@ class GameClient:
                     'y': data.y,
                 }
             elif isinstance(data, PlayerJoin):
+                self.game_state['last_message'] = 'player join'
                 self.add_chat_message('player join')
         except Exception as e:
             raise e

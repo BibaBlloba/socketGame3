@@ -30,7 +30,7 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
         await websocket.send_bytes(data)
 
         for _, player in gameSessionsManager.players.items():
-            if player.id == id:
+            if player.id == user['user_id']:
                 continue
 
             data = PlayerJoin(
@@ -39,7 +39,9 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
                 player.position['x'],
                 player.position['y'],
             )
-            await websocket.send_bytes(GameProtocol.pack_player_join(data))
+            print(f'player join send: {user_data.name}')
+            print(data)
+            await player.websocket.send_bytes(GameProtocol.pack_player_join(data))
 
         while True:
             data = await websocket.receive_bytes()

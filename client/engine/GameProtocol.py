@@ -22,6 +22,7 @@ class PlayerInit:
     y: int
 
 
+@dataclass
 class PlayerJoin:
     player_id: int
     name: str
@@ -161,4 +162,5 @@ class GameProtocol:
                 return GameProtocol.unpack_player_init(data)
         except Exception as e:
             print(f'Ошибка распаковки сообщения типа {msg_type}: {e}')
+            exit(f'{msg_type}: {e}')
             return None
