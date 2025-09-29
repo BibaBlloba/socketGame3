@@ -19,20 +19,16 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
             websocket, user['user_id'], user_data.name, user_data.x, user_data.y
         )
 
-        for player in gameSessionsManager.players.items():
-            print(player[1].id)
-            print(player[1].name)
-            print(player[1].position)
+        player = gameSessionsManager.players[user_data.name]
+        init_player_data = PlayerInit(
+            player.id,
+            player.name,
+            player.position['x'],
+            player.position['y'],
+        )
+        data = GameProtocol.pack_player_init(init_player_data)
 
-            init_player_data = PlayerInit(
-                player[1].id,
-                player[1].name,
-                player[1].position['x'],
-                player[1].position['y'],
-            )
-            data = GameProtocol.pack_player_init(init_player_data)
-
-            await websocket.send_bytes(data)
+        await websocket.send_bytes(data)
 
         while True:
             data = await websocket.receive_bytes()
