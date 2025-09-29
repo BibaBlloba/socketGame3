@@ -16,6 +16,11 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
 
         user_data = await db.users.get_uesr_with_hashedPwd(id=user['user_id'])
 
+        if user_data.x is None:
+            user_data.x = 0
+        if user_data.y is None:
+            user_data.y = 0
+
         gameSessionsManager.add_player(
             websocket, user['user_id'], user_data.name, user_data.x, user_data.y
         )
@@ -35,10 +40,10 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
                 continue
 
             data = PlayerJoin(
-                player.id,
-                player.name,
-                player.position['x'],
-                player.position['y'],
+                user['user_id'],
+                user_data.name,
+                user_data.x,
+                user_data.y,
             )
             print(f'player join send: {user_data.name}')
             print(data)

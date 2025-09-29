@@ -132,7 +132,8 @@ class GameProtocol:
     @staticmethod
     def unpack_player_join(data: bytes) -> int:
         """Распаковка сообщения о подключении игрока"""
-        _, player_id, name, x, y = struct.unpack('!B I 20s i i', data)
+        _, player_id, name_bytes, x, y = struct.unpack('!B I 20s i i', data)
+        name = name_bytes.decode('utf-8').rstrip('\x00')
         return PlayerJoin(player_id, name, x, y)
 
     @staticmethod
