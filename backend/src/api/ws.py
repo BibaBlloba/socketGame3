@@ -96,6 +96,11 @@ async def ws(db: DbDep, websocket: WebSocket, user: UserDep):
 
     except WebSocketDisconnect:
         print(f'{user_data.name} disconnected')
+        message = GameProtocol.pack_player_leave(user['user_id'])
         del gameSessionsManager.players[user_data.name]
+
+        for _, player in gameSessionsManager.players.items():
+            await player.websocket.send_bytes(message)
+
     except Exception as ex:
         print('ex: ', ex)

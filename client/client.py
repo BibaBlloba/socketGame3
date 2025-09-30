@@ -2,15 +2,13 @@ import argparse
 import asyncio
 import curses
 import threading
-import time
-from curses.textpad import Textbox, rectangle
 from queue import Queue
 
 import requests
 import websockets
 
-from engine.GameProtocol import (GameProtocol, PlayerInit, PlayerJoin,
-                                 PlayerUpdate)
+from engine.GameProtocol import (GameProtocol, MessageType, PlayerInit,
+                                 PlayerJoin, PlayerUpdate)
 
 
 class GameClient:
@@ -34,7 +32,6 @@ class GameClient:
             async with websockets.connect(self.server_url) as ws:
                 self.websocket = ws
 
-                # Запускаем задачу для отправки исходящих сообщений
                 send_task = asyncio.create_task(self.outgoing_sender())
 
                 message = await ws.recv()
@@ -43,6 +40,7 @@ class GameClient:
                 try:
                     while True:
                         message = await ws.recv()
+                        # self.add_chat_message(GameProtocol.unpack_message(message))
                         self.message_queue.put(message)
                 finally:
                     send_task.cancel()
@@ -65,7 +63,7 @@ class GameClient:
                 if self.websocket:
                     await self.websocket.send(message)
             except asyncio.TimeoutError:
-                continue  # Проверяем running условие
+                continue
             except Exception as e:
                 pass
 
@@ -77,64 +75,40 @@ class GameClient:
 
     def handle_server_message(self, message: bytes):
         """Разбор сообщений от сервера"""
-        data = GameProtocol.unpack_message(message)
+        msg_type, data = GameProtocol.unpack_message(message)
 
         try:
-            if isinstance(data, PlayerInit):
-                self.player_id = data.player_id
-                self.player_name = data.name
-                self.game_state['player'] = {
-                    'id': data.player_id,
-                    'name': data.name,
-                    'x': data.x,
-                    'y': data.y,
-                }
-            elif isinstance(data, PlayerJoin):
-                self.game_state['last_message'] = 'player join'
-                self.add_chat_message(f'player join: {data.name}')
-                self.game_state['objects']['players'][data.player_id] = {
-                    'name': data.name,
-                    'x': data.x,
-                    'y': data.y,
-                }
-            elif isinstance(data, PlayerUpdate):
-                self.game_state['objects']['players'][data.player_id] = {
-                    'name': data.name,
-                    'x': data.x,
-                    'y': data.y,
-                }
+            match msg_type:
+                case MessageType.PLAYER_INIT:
+                    self.player_id = data.player_id
+                    self.player_name = data.name
+                    self.game_state['player'] = {
+                        'id': data.player_id,
+                        'name': data.name,
+                        'x': data.x,
+                        'y': data.y,
+                    }
+                case MessageType.PLAYER_JOIN:
+                    self.game_state['last_message'] = 'player join'
+                    self.add_chat_message(f'player join: {data.name}')
+                    self.game_state['objects']['players'][data.player_id] = {
+                        'name': data.name,
+                        'x': data.x,
+                        'y': data.y,
+                    }
+                case MessageType.PLAYER_UPDATE:
+                    self.game_state['objects']['players'][data.player_id] = {
+                        'name': data.name,
+                        'x': data.x,
+                        'y': data.y,
+                    }
+                case MessageType.PLAYER_LEAVE:
+                    player = self.game_state['objects']['players'][data]
+                    self.add_chat_message(f'player leave: {player["name"]}')
+                    self.game_state['objects']['players'].pop(data, None)
         except Exception as e:
             raise e
 
-        # try:
-        #     if command == 'player_init':
-        #         # player_init:id:name:x:y
-        #         _, id, name, x, y = parts
-        #         self.player_id = int(id)
-        #         self.game_state['player'] = {
-        #             'id': int(id),
-        #             'name': name,
-        #             'x': int(x),
-        #             'y': int(y),
-        #         }
-        #
-        #     elif command == 'player_move':
-        #         # player_move:id:x:y
-        #         _, id, x, y = parts
-        #         if id in self.game_state['objects']:
-        #             self.game_state['objects'][id]['x'] = int(x)
-        #             self.game_state['objects'][id]['y'] = int(y)
-        #
-        #     elif command == 'obj_add':
-        #         # obj_add:id:type:x:y
-        #         (_, id, obj_type, x, y) = parts
-        #         self.game_state['objects'][id] = {
-        #             'id': id,
-        #             'type': obj_type,
-        #             'x': int(x),
-        #             'y': int(y),
-        #         }
-        #
         #     elif command == 'player_leave':
         #         # player_leave:id
         #         _, id = parts

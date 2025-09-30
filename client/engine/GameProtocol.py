@@ -65,7 +65,7 @@ class GameProtocol:
 
     @staticmethod
     def unpack_player_init(data: bytes):
-        _, player_id, name, x, y = struct.unpack('!BI20sii', data)
+        msg_type, player_id, name, x, y = struct.unpack('!BI20sii', data)
         return PlayerInit(player_id, name.decode('utf-8').replace('\0', ''), x, y)
 
     @staticmethod
@@ -107,7 +107,7 @@ class GameProtocol:
     def unpack_chat_message(data: bytes) -> ChatMessage:
         """Распаковка чат-сообщения"""
         # Сначала читаем заголовок чтобы узнать длину сообщения
-        _, player_id, msg_length = struct.unpack('!B I I', data[:9])
+        msg_type, player_id, msg_length = struct.unpack('!B I I', data[:9])
         # Затем читаем полное сообщение
         full_format = f'!B I I {msg_length}s f'
         _, player_id, msg_length, message_bytes, timestamp = struct.unpack(
@@ -130,7 +130,7 @@ class GameProtocol:
     @staticmethod
     def unpack_player_join(data: bytes) -> int:
         """Распаковка сообщения о подключении игрока"""
-        _, player_id, name, x, y = struct.unpack('!B I 20s i i', data)
+        msg_type, player_id, name, x, y = struct.unpack('!B I 20s i i', data)
         return PlayerJoin(player_id, name.decode('utf-8').replace('\0', ''), x, y)
 
     @staticmethod
@@ -141,7 +141,7 @@ class GameProtocol:
     @staticmethod
     def unpack_player_leave(data: bytes) -> int:
         """Распаковка сообщения об отключении игрока"""
-        _, player_id = struct.unpack('!B I', data)
+        msg_type, player_id = struct.unpack('!B I', data)
         return player_id
 
     @staticmethod
@@ -154,15 +154,15 @@ class GameProtocol:
 
         try:
             if msg_type == MessageType.PLAYER_UPDATE:
-                return GameProtocol.unpack_player_update(data)
+                return msg_type, GameProtocol.unpack_player_update(data)
             elif msg_type == MessageType.CHAT_MESSAGE:
-                return GameProtocol.unpack_chat_message(data)
+                return msg_type, GameProtocol.unpack_chat_message(data)
             elif msg_type == MessageType.PLAYER_JOIN:
-                return GameProtocol.unpack_player_join(data)
+                return msg_type, GameProtocol.unpack_player_join(data)
             elif msg_type == MessageType.PLAYER_LEAVE:
-                return GameProtocol.unpack_player_leave(data)
+                return msg_type, GameProtocol.unpack_player_leave(data)
             elif msg_type == MessageType.PLAYER_INIT:
-                return GameProtocol.unpack_player_init(data)
+                return msg_type, GameProtocol.unpack_player_init(data)
         except Exception as e:
             print(f'Ошибка распаковки сообщения типа {msg_type}: {e}')
             exit(f'{msg_type}: {e}')
