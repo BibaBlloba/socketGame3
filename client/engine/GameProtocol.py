@@ -66,14 +66,14 @@ class GameProtocol:
     @staticmethod
     def unpack_player_init(data: bytes):
         _, player_id, name, x, y = struct.unpack('!BI20sii', data)
-        return PlayerInit(player_id, name, x, y)
+        return PlayerInit(player_id, name.decode('utf-8').replace('\0', ''), x, y)
 
     @staticmethod
     def pack_player_update(update: PlayerUpdate) -> bytes:
         """Упаковка обновления позиции игрока"""
         # Упаковка основных данных
         data = struct.pack(
-            '!BI20sii',
+            '!B I 20s i i',
             MessageType.PLAYER_UPDATE,
             update.player_id,
             update.name.encode('utf-8'),
@@ -86,7 +86,7 @@ class GameProtocol:
     def unpack_player_update(data: bytes) -> PlayerUpdate:
         """Распаковка обновления позиции игрока"""
         msg_type, player_id, name, x, y = struct.unpack('!BI20sii', data)
-        return PlayerUpdate(player_id, name, x, y)
+        return PlayerUpdate(player_id, name.decode('utf-8').replace('\0', ''), x, y)
 
     @staticmethod
     def pack_chat_message(chat: ChatMessage) -> bytes:
@@ -122,7 +122,7 @@ class GameProtocol:
             '!B I 20s i i',
             MessageType.PLAYER_JOIN,
             data.player_id,
-            data.name,
+            data.name.encode('utf-8'),
             data.x,
             data.y,
         )
@@ -130,9 +130,8 @@ class GameProtocol:
     @staticmethod
     def unpack_player_join(data: bytes) -> int:
         """Распаковка сообщения о подключении игрока"""
-        _, player_id, name_bytes, x, y = struct.unpack('!B I 20s i i', data)
-        name = name_bytes.decode('utf-8').rstrip('\x00')
-        return PlayerJoin(player_id, name, x, y)
+        _, player_id, name, x, y = struct.unpack('!B I 20s i i', data)
+        return PlayerJoin(player_id, name.decode('utf-8').replace('\0', ''), x, y)
 
     @staticmethod
     def pack_player_leave(player_id: int) -> bytes:

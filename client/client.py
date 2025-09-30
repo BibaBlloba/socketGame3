@@ -63,9 +63,6 @@ class GameClient:
                     0.1,  # timeout 0.1s
                 )
                 if self.websocket:
-                    self.add_chat_message(
-                        f'send move: {GameProtocol.unpack_message(message)}'
-                    )
                     await self.websocket.send(message)
             except asyncio.TimeoutError:
                 continue  # Проверяем running условие
@@ -81,33 +78,25 @@ class GameClient:
     def handle_server_message(self, message: bytes):
         """Разбор сообщений от сервера"""
         data = GameProtocol.unpack_message(message)
-        self.add_chat_message(f'{data=}')
 
         try:
             if isinstance(data, PlayerInit):
-                self.add_chat_message('player_init')
-                self.add_chat_message(f'{data}')
-                _name = data.name.decode('utf-8').replace('\0', '')
-
                 self.player_id = data.player_id
-                self.player_name = _name
+                self.player_name = data.name
                 self.game_state['player'] = {
                     'id': data.player_id,
-                    'name': _name,
+                    'name': data.name,
                     'x': data.x,
                     'y': data.y,
                 }
             elif isinstance(data, PlayerJoin):
                 self.game_state['last_message'] = 'player join'
-                self.add_chat_message('player join')
+                self.add_chat_message(f'player join: {data.name}')
                 self.game_state['objects']['players'][data.player_id] = {
                     'name': data.name,
                     'x': data.x,
                     'y': data.y,
                 }
-                self.add_chat_message(
-                    f'new player: {self.game_state["objects"]["players"][data.player_id]["name"]} | type: {type(self.game_state["objects"]["players"][data.player_id]["name"])}'
-                )
             elif isinstance(data, PlayerUpdate):
                 self.game_state['objects']['players'][data.player_id] = {
                     'name': data.name,
@@ -274,19 +263,27 @@ class GameClient:
                 # Проверяем, виден ли игрок на экране
                 if 0 <= other_screen_x < width and 0 <= other_screen_y < height:
                     # Определяем символ для другого игрока
-                    char = '1'
-                    color = 'RED'
+                    char = '@'
 
                     try:
-                        stdscr.addch(other_screen_y, other_screen_x, char)
+                        curses.init_pair(1, curses.COLOR_GREEN, -1)
+                        color_pair = curses.color_pair(1)
+                    except Exception:
+                        color_pair = 0
+
+                    try:
+                        stdscr.addch(other_screen_y, other_screen_x, char, color_pair)
 
                         # Подписываем имя игрока (если есть место)
                         if 'name' in other_player and other_screen_y + 1 < height:
-                            name = other_player['name'][:10]  # Обрезаем длинные имена
+                            name = other_player['name'][:10]
                             if other_screen_x + len(name) < width:
-                                stdscr.addstr(other_screen_y + 1, other_screen_x, name)
+                                stdscr.addstr(
+                                    other_screen_y + 1, other_screen_x, f'{name}'
+                                )
+
                     except curses.error:
-                        pass  # Игнорируем ошибки выхода за границы экрана
+                        pass
 
         stdscr.refresh()
 
@@ -307,6 +304,8 @@ class GameClient:
             curses.curs_set(0)  # Скрываем курсор
             stdscr.nodelay(1)  # Неблокирующий ввод
             stdscr.timeout(150)  # Таймаут для getch (мс)
+            curses.start_color()
+            curses.use_default_colors()
 
             frame = 0
 
