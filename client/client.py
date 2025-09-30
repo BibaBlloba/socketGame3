@@ -163,7 +163,7 @@ class GameClient:
         # Рисуем рамку чата
         chat_win = curses.newwin(chat_height, chat_width, chat_y, chat_x)
         chat_win.box()
-        chat_win.addstr(0, 2, ' XUI ')
+        chat_win.addstr(0, 2, ' Чат ')
 
         # Доступная высота для сообщений (исключая рамку)
         available_height = chat_height - 2
@@ -253,7 +253,9 @@ class GameClient:
                             name = other_player['name'][:10]
                             if other_screen_x + len(name) < width:
                                 stdscr.addstr(
-                                    other_screen_y + 1, other_screen_x, f'{name}'
+                                    other_screen_y + 1,
+                                    other_screen_x - len(name) // 2 + 1,
+                                    f'{name}',
                                 )
 
                     except curses.error:
