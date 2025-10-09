@@ -3,6 +3,7 @@ import asyncio
 import curses
 import threading
 from queue import Queue
+from random import random
 
 import requests
 import websockets
@@ -21,10 +22,38 @@ class GameClient:
             'objects': {'players': {}},
             'chat': [],
             'last_message': None,
+            'map': None,
         }
         self.message_queue = Queue()
         self.outgoing_queue = Queue()
         self.websocket = None
+
+        # FIX: For testing
+        self.game_state['map'] = self.create_large_map(80, 40)
+
+    # Генерация большой карты для тестирования скроллинга
+    def create_large_map(self, width=100, height=50):
+        map_data = []
+
+        # Верхняя граница
+        map_data.append(list('#' * width))
+
+        # Средние строки
+        for y in range(1, height - 1):
+            row = ['#']  # Левая граница
+            for x in range(1, width - 1):
+                # Случайные препятствия (10% chance)
+                if random() < 0.1:
+                    row.append('#')
+                else:
+                    row.append('.')
+            row.append('#')  # Правая граница
+            map_data.append(row)
+
+        # Нижняя граница
+        map_data.append(list('#' * width))
+
+        return map_data
 
     async def websocket_listener(self):
         """Прослушивание сообщений от сервера и отправка исходящих"""
@@ -201,6 +230,69 @@ class GameClient:
 
         chat_win.refresh()
 
+    def render_map(self, stdscr: curses.window):
+        height, width = stdscr.getmaxyx()
+        player = self.game_state['player']
+
+        # Центрируем камеру на игроке
+        camera_x = player['x'] - width // 2
+        camera_y = player['y'] - height // 2
+
+        # Получаем карту из game_state
+        if 'map' not in self.game_state:
+            return
+
+        game_map = self.game_state['map']
+        if not game_map:
+            return
+
+        map_height = len(game_map)
+        map_width = len(game_map[0]) if map_height > 0 else 0
+
+        # Вычисляем центр карты в абсолютных координатах
+        # Предполагаем, что центр карты находится в (0,0)
+        # Тогда левый верхний угол карты будет в (-map_width//2, -map_height//2)
+        map_center_x = 0
+        map_center_y = 0
+        map_start_x = map_center_x - map_width // 2
+        map_start_y = map_center_y - map_height // 2
+        map_end_x = map_start_x + map_width
+        map_end_y = map_start_y + map_height
+
+        # Рендерим видимую часть карты
+        for screen_y in range(height):
+            for screen_x in range(width):
+                # Вычисляем абсолютные координаты мира
+                world_x = camera_x + screen_x
+                world_y = camera_y + screen_y
+
+                # Преобразуем мировые координаты в координаты карты
+                map_x = world_x - map_start_x
+                map_y = world_y - map_start_y
+
+                # Проверяем, находится ли точка в пределах карты
+                if 0 <= map_y < map_height and 0 <= map_x < map_width:
+                    char = game_map[map_y][map_x]
+
+                    # Проверяем, что символ можно отобразить
+                    if char and 32 <= ord(char) <= 126:
+                        try:
+                            curses.init_pair(2, curses.COLOR_CYAN, -1)
+                            color_pair = curses.color_pair(2)
+                        except Exception:
+                            color_pair = 0
+                        try:
+                            stdscr.addch(screen_y, screen_x, char, color_pair)
+                        except curses.error:
+                            pass
+
+                else:
+                    # Если за пределами карты - рисуем пустоту
+                    try:
+                        stdscr.addch(screen_y, screen_x, ' ')
+                    except curses.error:
+                        pass
+
     def render(self, stdscr: curses.window, frame):
         stdscr.clear()
         height, width = stdscr.getmaxyx()
@@ -215,7 +307,10 @@ class GameClient:
 
         # Центрируем камеру на игроке
         camera_x = player['x'] - width // 2
+
         camera_y = player['y'] - height // 2
+
+        self.render_map(stdscr)
 
         # Рисуем игрока
         player_screen_x = player['x'] - camera_x
