@@ -7,7 +7,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.api.rest.auth import router as ws_router
+from src.api.rest.auth_v2 import router as ws_router
 from src.api.ws import router as auth_router
 
 origins = [
