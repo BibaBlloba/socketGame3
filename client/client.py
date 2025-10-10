@@ -138,12 +138,6 @@ class GameClient:
         except Exception as e:
             raise e
 
-        #     elif command == 'player_leave':
-        #         # player_leave:id
-        #         _, id = parts
-        #         if id in self.game_state['objects']:
-        #             del self.game_state['objects'][id]
-        #
         #     elif command == 'chat':
         #         # chat:player_id:message
         #         _, sender_id, msg_text = parts
@@ -294,16 +288,9 @@ class GameClient:
                         pass
 
     def render(self, stdscr: curses.window, frame):
-        stdscr.clear()
+        # stdscr.clear()
         height, width = stdscr.getmaxyx()
         player = self.game_state['player']
-
-        stdscr.addstr(0, 0, f'frame: {frame}')
-        stdscr.addstr(0, 20, f'name: {self.game_state["player"]["name"]}')
-        stdscr.addstr(1, 20, f'id: {self.player_id}')
-        stdscr.addstr(0, 40, f'last_message: {self.game_state["last_message"]}')
-        stdscr.addstr(1, 40, f'x: {self.game_state["player"]["x"]}')
-        stdscr.addstr(2, 40, f'y: {self.game_state["player"]["y"]}')
 
         # Центрируем камеру на игроке
         camera_x = player['x'] - width // 2
@@ -311,6 +298,13 @@ class GameClient:
         camera_y = player['y'] - height // 2
 
         self.render_map(stdscr)
+
+        stdscr.addstr(0, 0, f'frame: {frame}')
+        stdscr.addstr(0, 20, f'name: {self.game_state["player"]["name"]}')
+        stdscr.addstr(1, 20, f'id: {self.player_id}')
+        stdscr.addstr(0, 40, f'last_message: {self.game_state["last_message"]}')
+        stdscr.addstr(1, 40, f'x: {self.game_state["player"]["x"]}')
+        stdscr.addstr(2, 40, f'y: {self.game_state["player"]["y"]}')
 
         # Рисуем игрока
         player_screen_x = player['x'] - camera_x
@@ -372,8 +366,8 @@ class GameClient:
         self.start_websocket_thread()
 
         def main(stdscr):
-            curses.curs_set(0)  # Скрываем курсор
-            stdscr.nodelay(1)  # Неблокирующий ввод
+            curses.curs_set(0)  
+            stdscr.nodelay(1)  
             stdscr.timeout(150)  # Таймаут для getch (мс)
             curses.start_color()
             curses.use_default_colors()
@@ -412,10 +406,11 @@ class GameClient:
 
 parser = argparse.ArgumentParser()
 parser.add_argument('-u')
+parser.add_argument('-p')
 args = parser.parse_args()
 
 token = requests.post(
-    'http://localhost:8000/auth/login', json={'name': args.u, 'password': 'string'}
+    'http://localhost:8000/auth/login', json={'name': args.u, 'password': args.p}
 ).json()['access_token']
 
 gameClient = GameClient(
