@@ -2,7 +2,7 @@ import argparse
 import asyncio
 import curses
 import threading
-from curses.textpad import Textbox
+from curses import newwin, textpad
 from queue import Queue
 from random import random
 
@@ -12,40 +12,94 @@ import websockets
 from engine.GameProtocol import (GameProtocol, MessageType, PlayerInit,
                                  PlayerJoin, PlayerUpdate)
 
+SERVER_URL: str
+
 
 class LoginForm:
     def __init__(self) -> None:
         pass
 
-
     def run(self) -> str:
         def main(stdscr: curses.window):
-            curses.curs_set(0)
-            stdscr.timeout(150)  
-            stdscr.keypad(True)
             curses.start_color()
             curses.use_default_colors()
-            height, width = stdscr.getmaxyx()
 
             while True:
-                login_window = curses.newwin(6, 30, height // 2, width // 2 - 15)
-                login_window.box()
-                login_window.addstr(0, 2, ' Login ')
-                login_field = login_window.derwin(1, 26, 1, 2)
-                login_field.addstr(0, 0, "Username: ")
-                login_textbox = Textbox(login_field)
+                login, password = self.login_screen(stdscr)
 
-                password_field = login_window.derwin(1, 26, 3, 2)
-                password_field.addstr(0, 0, "Password: ")
-                password_textbox = Textbox(password_field)
+                height, width = stdscr.getmaxyx()
+                message_win = newwin(6, 20, height // 2 + 4, width // 2 - 10)
+                message_win.box()
 
-                key = login_window.getch()
-                if key == curses.KEY_ENTER or key == ord('\n') or key == ord('\r'):
-                    login_textbox.edit()
+                try:
+                    response = requests.post(
+                        f'http://{SERVER_URL}:8000/auth/login',
+                        json={'name': login, 'password': password},
+                    )
+                    if response.status_code == 200:
+                        return response.json()['access_token']
+                    else:
+                        message_win.addstr(1, 1, f'{response.json()["detail"]}')
+                        message_win.addstr(4, 5, '𓍊𓋼𓍊𓋼𓍊𓆏 𓍊𓋼𓍊𓋼𓍊')
+                        message_win.refresh()
+                except Exception as ex:
+                    raise ex
 
-                login_window.refresh()
+        return curses.wrapper(main)
 
-        curses.wrapper(main)
+    def login_screen(self, stdscr):
+        curses.curs_set(1)
+        stdscr.keypad(True)
+        height, width = stdscr.getmaxyx()
+
+        login_win = curses.newwin(6, 40, height // 2 - 3, width // 2 - 20)
+        login_win.box()
+        login_win.addstr(0, 2, ' Login ')
+
+        login_win.addstr(1, 2, 'Username: ')
+        login_win.addstr(3, 2, 'Password: ')
+
+        username_field = curses.newwin(1, 25, height // 2 - 2, width // 2 - 8)
+        password_field = curses.newwin(1, 25, height // 2, width // 2 - 8)
+
+        username_textbox = textpad.Textbox(username_field)
+        password_textbox = textpad.Textbox(password_field)
+
+        current_field = 0  # 0 - username, 1 - password
+        fields = [username_textbox, password_textbox]
+        login_win.refresh()
+        username_field.refresh()
+        password_field.refresh()
+
+        while True:
+            if current_field == 0:
+                username_field.refresh()
+                # Кастомный обработчик для username
+                username_textbox.edit(self.enter_handler)
+                current_field = 1
+            else:
+                password_field.refresh()
+                # Кастомный обработчик для password
+                password_textbox.edit(self.enter_handler)
+                # После ввода пароля - завершаем
+                break
+
+            login_win.refresh()
+
+        username = username_textbox.gather().strip()
+        password = password_textbox.gather().strip()
+
+        return username, password
+
+    def enter_handler(self, key):
+        """Обработчик клавиш для Textbox.
+        Enter переходит к следующему полю, Ctrl+G завершает ввод."""
+        if key == curses.KEY_ENTER or key in (10, 13):  # Enter
+            return 7  # Ctrl+G - завершает редактирование текущего поля
+        elif key == curses.KEY_BTAB:  # Shift+Tab - возврат к предыдущему полю
+            return 7
+        return key
+
 
 class GameClient:
     def __init__(self, server_url: str, token: str) -> None:
@@ -401,8 +455,8 @@ class GameClient:
         self.start_websocket_thread()
 
         def main(stdscr):
-            curses.curs_set(0)  
-            stdscr.nodelay(1)  
+            curses.curs_set(0)
+            stdscr.nodelay(1)
             stdscr.timeout(150)  # Таймаут для getch (мс)
             curses.start_color()
             curses.use_default_colors()
@@ -440,19 +494,16 @@ class GameClient:
 
 
 parser = argparse.ArgumentParser()
-parser.add_argument('-u')
-parser.add_argument('-p')
+parser.add_argument('-s')
 args = parser.parse_args()
 
-token = requests.post(
-    'http://localhost:8000/auth/login', json={'name': args.u, 'password': args.p}
-).json()['access_token']
+SERVER_URL = str(args.s)
 
 login_form = LoginForm()
 token = login_form.run()
 
 gameClient = GameClient(
-    'localhost',
+    SERVER_URL,
     token,
 )
 

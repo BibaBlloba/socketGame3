@@ -23,7 +23,7 @@ async def register_user(db: DbDep, data: UserAddRequest = Body()):
 async def login_user(db: DbDep, data: UserLogin):
     user = await db.users.get_uesr_with_hashedPwd(name=data.name)
     if data.name == '' or data.password == '':
-        raise HTTPException(401)
+        raise HTTPException(401, detail='Поля пустые')
 
     if not user:
         hashed_password = AuthService().hash_password(data.password)
@@ -32,10 +32,8 @@ async def login_user(db: DbDep, data: UserLogin):
         await db.commit()
         user = await db.users.get_uesr_with_hashedPwd(name=data.name)
 
-    if not AuthService().verify_password(
-        data.password, user.hashed_password
-    ):
-        raise HTTPException(status_code=401)
+    if not AuthService().verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail='Пароль неверный')
 
     access_token = AuthService().create_access_token({'user_id': user.id})
     return {'access_token': access_token}
