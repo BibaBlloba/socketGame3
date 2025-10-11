@@ -2,6 +2,7 @@ import argparse
 import asyncio
 import curses
 import threading
+from curses.textpad import Textbox
 from queue import Queue
 from random import random
 
@@ -11,6 +12,40 @@ import websockets
 from engine.GameProtocol import (GameProtocol, MessageType, PlayerInit,
                                  PlayerJoin, PlayerUpdate)
 
+
+class LoginForm:
+    def __init__(self) -> None:
+        pass
+
+
+    def run(self) -> str:
+        def main(stdscr: curses.window):
+            curses.curs_set(0)
+            stdscr.timeout(150)  
+            stdscr.keypad(True)
+            curses.start_color()
+            curses.use_default_colors()
+            height, width = stdscr.getmaxyx()
+
+            while True:
+                login_window = curses.newwin(6, 30, height // 2, width // 2 - 15)
+                login_window.box()
+                login_window.addstr(0, 2, ' Login ')
+                login_field = login_window.derwin(1, 26, 1, 2)
+                login_field.addstr(0, 0, "Username: ")
+                login_textbox = Textbox(login_field)
+
+                password_field = login_window.derwin(1, 26, 3, 2)
+                password_field.addstr(0, 0, "Password: ")
+                password_textbox = Textbox(password_field)
+
+                key = login_window.getch()
+                if key == curses.KEY_ENTER or key == ord('\n') or key == ord('\r'):
+                    login_textbox.edit()
+
+                login_window.refresh()
+
+        curses.wrapper(main)
 
 class GameClient:
     def __init__(self, server_url: str, token: str) -> None:
@@ -413,10 +448,14 @@ token = requests.post(
     'http://localhost:8000/auth/login', json={'name': args.u, 'password': args.p}
 ).json()['access_token']
 
+login_form = LoginForm()
+token = login_form.run()
+
 gameClient = GameClient(
     'localhost',
     token,
 )
+
 gameClient.run()
 
 
