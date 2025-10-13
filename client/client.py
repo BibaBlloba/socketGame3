@@ -240,6 +240,9 @@ class GameClient:
         # except Exception as e:
         #     print(f"Error processing message '{message}': {e}")
 
+    def send_chat_message(self, message: str):
+        self.add_chat_message(message)
+
     def send_move(self, dx: int, dy: int):
         """Отправка движения на сервер"""
         try:
@@ -280,6 +283,23 @@ class GameClient:
         # Доступная высота для сообщений (исключая рамку)
         available_height = chat_height - 2
         max_line_width = chat_width - 2  # Ширина с учетом отступов от рамки
+
+        textbox_win = newwin(
+            3,
+            chat_width - 2,
+            chat_y + available_height + 2,
+            chat_x + 1,
+        )
+        self.chat_field = textpad.Textbox(textbox_win)
+        # _win = newwin(
+        #     5,
+        #     chat_width,
+        #     chat_y + available_height + 1,
+        #     chat_x,
+        # )
+        # _win.box()
+        # _win.refresh()
+        textbox_win.refresh()
 
         # Собираем все строки для отображения
         display_lines = []
@@ -491,6 +511,8 @@ class GameClient:
             self.send_move(-1, 0)
         elif key in [ord('d'), ord('D')]:
             self.send_move(1, 0)
+        elif key in [ord('\n'), ord('\r')]:
+            self.chat_field.edit()
 
 
 parser = argparse.ArgumentParser()
