@@ -8,6 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.api.rest.auth_v2 import router as ws_router
+from src.api.rest.status import router as status_router
 from src.api.ws import router as auth_router
 
 origins = [
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 app.include_router(ws_router)
 app.include_router(auth_router)
+app.include_router(status_router)
 
 if __name__ == '__main__':
     uvicorn.run('main:app', reload=True, host='0.0.0.0', port=8000)
