@@ -12,7 +12,7 @@ import websockets
 from engine.GameProtocol import (GameProtocol, MessageType, PlayerInit,
                                  PlayerJoin, PlayerUpdate)
 
-SERVER_URL: str
+SERVER_IP: str
 
 
 class LoginForm:
@@ -23,17 +23,24 @@ class LoginForm:
         def main(stdscr: curses.window):
             curses.start_color()
             curses.use_default_colors()
+            curses.init_pair(4, curses.COLOR_RED, -1)
 
             while True:
-                login, password = self.login_screen(stdscr)
-
                 height, width = stdscr.getmaxyx()
                 message_win = newwin(6, 20, height // 2 + 4, width // 2 - 10)
                 message_win.box()
+                try:
+                    response = requests.get(f'http://{SERVER_IP}:8000/status')
+                except Exception as ex:
+                    message_win.addstr(1, 1, 'Сервер недоступен', curses.color_pair(4))
+                    message_win.addstr(4, 5, '𓍊𓋼𓍊𓋼𓍊𓆏 𓍊𓋼𓍊𓋼𓍊')
+                    message_win.refresh()
+
+                login, password = self.login_screen(stdscr)
 
                 try:
                     response = requests.post(
-                        f'http://{SERVER_URL}:8000/auth/login',
+                        f'http://{SERVER_IP}:8000/auth/login',
                         json={'name': login, 'password': password},
                     )
                     if response.status_code == 200:
@@ -515,21 +522,22 @@ class GameClient:
             self.chat_field.edit()
 
 
-parser = argparse.ArgumentParser()
-parser.add_argument('-s')
-args = parser.parse_args()
+if __name__ == '__main__':
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('-s')
+    # args = parser.parse_args()
 
-SERVER_URL = str(args.s)
+    SERVER_IP = '178.72.129.84'
 
-login_form = LoginForm()
-token = login_form.run()
+    login_form = LoginForm()
+    token = login_form.run()
 
-gameClient = GameClient(
-    SERVER_URL,
-    token,
-)
+    gameClient = GameClient(
+        SERVER_IP,
+        token,
+    )
 
-gameClient.run()
+    gameClient.run()
 
 
 # def draw_title(stdscr: curses.window, text: str):
