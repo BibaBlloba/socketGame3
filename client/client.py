@@ -503,15 +503,15 @@ class GameClient:
         """Обработка пользовательского ввода"""
         if key in [ord('q'), ord('Q')]:
             exit()
-        elif key in [ord('w'), ord('W')]:
+        elif key in [ord('w'), ord('W'), curses.KEY_UP]:
             self.send_move(0, -1)
-        elif key in [ord('s'), ord('S')]:
+        elif key in [ord('s'), ord('S'), curses.KEY_DOWN]:
             self.send_move(0, 1)
-        elif key in [ord('a'), ord('A')]:
+        elif key in [ord('a'), ord('A'), curses.KEY_LEFT]:
             self.send_move(-1, 0)
-        elif key in [ord('d'), ord('D')]:
+        elif key in [ord('d'), ord('D'), curses.KEY_RIGHT]:
             self.send_move(1, 0)
-        elif key in [ord('\n'), ord('\r')]:
+        elif key in [ord('\n'), ord('\r'), curses.KEY_ENTER]:
             self.chat_field.edit()
 
 
