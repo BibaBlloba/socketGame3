@@ -1,5 +1,6 @@
 import curses
 from time import sleep
+from typing import Dict
 
 from objects.Player import Player
 from UI.CameraWindow import CameraWindow
@@ -15,6 +16,7 @@ class TestGameClient:
             'last_message': None,
             'map': None,
         }
+        self.key_bindings = self._setup_key_bindings()
         self.camera = None
         self.player = None
 
@@ -131,10 +133,80 @@ class TestGameClient:
         if len(self.game_state['chat']) > 10:
             self.game_state['chat'].pop(0)
 
+    def handle_input(self, key: int) -> bool:
+        """Обрабатывает ввод клавиш.
+
+        Args:
+            key (int): Код клавиши из curses
+
+        Returns:
+            bool: True если игра должна продолжиться, False если нужно выйти
+        """
+        action = self.key_bindings.get(key)
+
+        if action:
+            return self._execute_action(action)
+
+        return True
+
+    def _execute_action(self, action: str) -> bool:
+        """Выполняет действие по его названию.
+
+        Args:
+            action (str): Название действия
+
+        Returns:
+            bool: True если игра должна продолжиться
+        """
+        if action == 'quit':
+            exit('q - Exit')
+        elif action.startswith('move_'):
+            return self._action_move(action)
+
+    def _setup_key_bindings(self) -> Dict[int, str]:
+        """Настраивает привязки клавиш к действиям."""
+        return {
+            # Движение
+            curses.KEY_UP: 'move_up',
+            curses.KEY_DOWN: 'move_down',
+            curses.KEY_LEFT: 'move_left',
+            curses.KEY_RIGHT: 'move_right',
+            ord('w'): 'move_up',
+            ord('s'): 'move_down',
+            ord('a'): 'move_left',
+            ord('d'): 'move_right',
+            # Действия
+            ord(' '): 'action',
+            ord('e'): 'interact',
+            ord('f'): 'attack',
+            ord('g'): 'pickup',
+            ord('i'): 'inventory',
+            # Системные
+            ord('q'): 'quit',
+            ord('c'): 'toggle_camera_follow',
+            ord('m'): 'toggle_map',
+            ord('x'): 'debug_info',
+            ord('z'): 'screenshot',
+            ord('/'): 'chat_mode',
+            # Цифровые клавиши для быстрых действий
+            ord('1'): 'hotbar_1',
+            ord('2'): 'hotbar_2',
+            ord('3'): 'hotbar_3',
+            ord('4'): 'hotbar_4',
+            ord('5'): 'hotbar_5',
+            # Функциональные клавиши
+            curses.KEY_F1: 'help',
+            curses.KEY_F2: 'save',
+            curses.KEY_F3: 'load',
+            curses.KEY_F5: 'quick_save',
+            curses.KEY_F9: 'quick_load',
+        }
+
     def main(self, stdscr: curses.window) -> None:
         curses.start_color()
         curses.use_default_colors()
         curses.curs_set(0)
+        stdscr.nodelay(1)
         frame = 0
 
         while True:
