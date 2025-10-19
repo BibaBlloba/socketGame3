@@ -1,0 +1,5 @@
+cx-freeze==8.4.1
+filelock==3.20.0
+packaging==25.0
+patchelf==0.17.2.4
+setuptools==80.9.0
